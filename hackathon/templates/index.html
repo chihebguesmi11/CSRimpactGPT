@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sustainability Strategy Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+            position: relative; /* Add this to make the absolute positioning of the logo relative to the body */
+        }
+
+        #chat-container {
+            width: 400px;
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+
+        #chat-box {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background-color: #d1f7c4;
+            align-self: flex-end;
+        }
+
+        .message.bot {
+            background-color: #f1f1f1;
+            align-self: flex-start;
+        }
+
+        #input-area {
+            display: flex;
+            border-top: 1px solid #ddd;
+            padding: 10px;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #send-btn {
+            margin-left: 10px;
+            padding: 10px 20px;
+            background-color: #33ad43;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #send-btn:hover {
+            background-color: #0056b3;
+        }
+
+        .error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .loading {
+            color: #004085;
+            background-color: #cce5ff;
+            border: 1px solid #b8daff;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            text-align: center;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <img src="{{ url_for('static', filename='logo.png') }}" style="position: absolute; top: 40px; left: 40px; width: 100px; height: 100px;" alt="Logo" />
+
+    <div id="chat-container">
+        <div id="chat-box"></div>
+        <div id="input-area">
+            <input type="text" id="user-input" placeholder="Type your message here...">
+            <button id="send-btn">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let conversationState = "initial";
+        let additionalData = {};
+        let userOption = "";
+        let isProcessing = false;
+    
+        function appendMessage(sender, message) {
+            const messageElement = `<div class="message ${sender}">${message}</div>`;
+            $('#chat-box').append(messageElement);
+            $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+        }
+
+        function showLoading() {
+            $('#chat-box').append('<div class="loading" id="loading-message">Generating response...</div>');
+            $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+            isProcessing = true;
+            $('#send-btn').prop('disabled', true);
+        }
+
+        function hideLoading() {
+            $('#loading-message').remove();
+            isProcessing = false;
+            $('#send-btn').prop('disabled', false);
+        }
+    
+        function sendMessage(userInput) {
+            if (isProcessing) return;
+            
+            showLoading();
+            
+            $.ajax({
+                url: '/generate',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    message: userInput,
+                    conversation_state: conversationState,
+                    user_option: userOption,
+                    additional_data: additionalData
+                }),
+                success: function (response) {
+                    hideLoading();
+                    appendMessage("bot", response.response);
+                    
+                    conversationState = response.conversation_state;
+                    userOption = response.user_option || userOption;
+                    additionalData = response.additional_data || additionalData;
+                },
+                error: function (error) {
+                    hideLoading();
+                    if (error.responseJSON && error.responseJSON.error) {
+                        appendMessage("bot", error.responseJSON.error);
+                    } else {
+                        appendMessage("bot", "Could you please rephrase that? I'm having trouble understanding.");
+                    }
+                }
+            });
+        }
+    
+        $(document).ready(function () {
+            sendMessage("");
+    
+            $('#send-btn').on('click', function () {
+                const userInput = $('#user-input').val().trim();
+                if (!userInput || isProcessing) return;
+    
+                appendMessage("user", userInput);
+                $('#user-input').val(''); 
+                sendMessage(userInput);
+            });
+    
+            $('#user-input').on('keypress', function (e) {
+                if (e.which === 13 && !isProcessing) {
+                    $('#send-btn').click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
