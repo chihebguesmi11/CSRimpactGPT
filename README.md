@@ -1,4 +1,4 @@
-<h1 align="center">🤖 CSRimpactGPT</h1>
+<h1 align="center"> CSRimpactGPT</h1>
 <p align="center">A smart GPT-4 powered chatbot using Retrieval-Augmented Generation (RAG) to support Corporate Social Responsibility strategies.</p>
 
 <p align="center">
